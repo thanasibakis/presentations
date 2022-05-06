@@ -4,7 +4,7 @@ author: Thanasi Bakis
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 format:
     revealjs:
-        multiplex: true
+        chalkboard: true
         smaller: true
         auto-animate-duration: 0.3
 
@@ -173,6 +173,11 @@ p(T)
 &\phantom{==} * p(C_9 | C_8) p(C_{10} | C_9) p(C_{11} | C_{10})
 \end{align*}
 
+::: {.notes}
+We could talk about estimation of these probabilties here; it's basically sample proportions of trees with observed child clades (L,R) among trees with observed parent clade C.
+We will save this discussion for the main method of the paper, though.
+:::
+
 ## *Subsplit Bayesian network* method {auto-animate=true}
 
 Whidden & Matsen (2015): *"CCD is still not flexible enough to capture the complexity of inferred posterior distributions on real data."*
@@ -204,8 +209,6 @@ A **subsplit** $S = (Y, Z)$ of clade $C$ is a tuple of subclades $Y, Z$ where:
 :::
 
 ::::
-
-
 
 In tree language, $Y$ and $Z$ are sister clades; they share the same parent clade, $Y \cup Z$.
 
@@ -339,31 +342,33 @@ The MLEs are available in closed form:
 
 where $m_1(s) = \sum_k I(s_{1,k} = s_1)$, and $m_i(s, t) = \sum_k I(s_{i,k} = s_i, s_{\pi_i, k} = t_i), i > 1$.
 
-## Maximum likelihood estimation {auto-animate=true}
+::: {.notes}
+Can show by taking the log and derivative, with some algebra in between.
 
-The likelihood is:
+Also, that second MLE is basically, among all trees where the parent of S_i has value t, the proportion where S_i had value s.
+:::
 
-$$
-L(T_1, ..., T_K) = \prod_k \left( p(S_1 = s_{1,k}) \prod_{i>1} p(S_i = s_{i,k} | S_{\pi_i} = s_{\pi_i, k}) \right)
-$$
+## Maximum likelihood estimation
 
-Let $\mathbf{C}_i$ be the observed subsplit values at node $S_i$.
-
-The MLEs are available in closed form:
+More simply:
 
 \begin{align*}
 \hat{p}(S_1 = s) &= \frac{\text{# of trees with } S_1 = s}{\text{sample size } K} \\
 \hat{p}(S_i = s | S_{\pi_i} = t) &= \frac{\text{# of trees where } S_i = s \text{ with parent } t}{\text{# of trees where } t \text{ was the parent of node } S_i}
 \end{align*}
 
+\
+
+These are like the sample proportions we discussed earlier, but only at the local level... thus, a tree that is never sampled can still be assigned non-zero probability, if its local features are represented across some sampled trees!
+
+\
+
 ::: {.fragment}
 Wait... there's some redundancy here.
 :::
 
 ::: {.notes}
-Can show by taking the log and derivative, with some algebra in between.
-
-Also, that second MLE is basically, among all trees where the parent of S_i has value t, the proportion where S_i had value s.
+That first note is very very important!!
 :::
 
 ## Maximum likelihood estimation

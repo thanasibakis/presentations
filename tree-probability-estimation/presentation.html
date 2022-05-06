@@ -30,6 +30,8 @@
   <link href="presentation_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="presentation_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="presentation_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="presentation_files/libs/revealjs/plugin/reveal-chalkboard/font-awesome/css/all.css" rel="stylesheet">
+  <link href="presentation_files/libs/revealjs/plugin/reveal-chalkboard/style.css" rel="stylesheet">
   <link href="presentation_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
   <style type="text/css">
 
@@ -459,6 +461,19 @@ p(T)
 &amp;= p(C_2, C_7) p(C_3, C_4 | C_2) p(C_5 | C_4) p(C_6 | C_5) p(C_8 | C_7) \\
 &amp;\phantom{==} * p(C_9 | C_8) p(C_{10} | C_9) p(C_{11} | C_{10})
 \end{align*}\]</span></p>
+<aside class="notes">
+<p>We could talk about estimation of these probabilties here; it’s basically sample proportions of trees with observed child clades (L,R) among trees with observed parent clade C. We will save this discussion for the main method of the paper, though.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
 </section>
 <section id="subsplit-bayesian-network-method" class="slide level2" data-auto-animate="true">
 <h2 data-id="quarto-animate-title"><em>Subsplit Bayesian network</em> method</h2>
@@ -616,25 +631,38 @@ L(T_1, ..., T_K) = \prod_k \left( p(S_1 = s_{1,k}) \prod_{i&gt;1} p(S_i = s_{i,k
 \hat{p}(S_i = s | S_{\pi_i} = t) &amp;= \frac{m_i(s, t)}{\sum_{s' \in \mathbf{C}_i} m_i(s', t)}
 \end{align*}\]</span></p>
 <p>where <span class="math inline">\(m_1(s) = \sum_k I(s_{1,k} = s_1)\)</span>, and <span class="math inline">\(m_i(s, t) = \sum_k I(s_{i,k} = s_i, s_{\pi_i, k} = t_i), i &gt; 1\)</span>.</p>
+<aside class="notes">
+<p>Can show by taking the log and derivative, with some algebra in between.</p>
+<p>Also, that second MLE is basically, among all trees where the parent of S_i has value t, the proportion where S_i had value s.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
 </section>
-<section id="maximum-likelihood-estimation-2" class="slide level2" data-auto-animate="true">
-<h2 data-id="quarto-animate-title">Maximum likelihood estimation</h2>
-<p>The likelihood is:</p>
-<p><span class="math display">\[
-L(T_1, ..., T_K) = \prod_k \left( p(S_1 = s_{1,k}) \prod_{i&gt;1} p(S_i = s_{i,k} | S_{\pi_i} = s_{\pi_i, k}) \right)
-\]</span></p>
-<p>Let <span class="math inline">\(\mathbf{C}_i\)</span> be the observed subsplit values at node <span class="math inline">\(S_i\)</span>.</p>
-<p>The MLEs are available in closed form:</p>
+<section id="maximum-likelihood-estimation-2" class="slide level2">
+<h2>Maximum likelihood estimation</h2>
+<p>More simply:</p>
 <p><span class="math display">\[\begin{align*}
 \hat{p}(S_1 = s) &amp;= \frac{\text{# of trees with } S_1 = s}{\text{sample size } K} \\
 \hat{p}(S_i = s | S_{\pi_i} = t) &amp;= \frac{\text{# of trees where } S_i = s \text{ with parent } t}{\text{# of trees where } t \text{ was the parent of node } S_i}
 \end{align*}\]</span></p>
+<p><br>
+</p>
+<p>These are like the sample proportions we discussed earlier, but only at the local level… thus, a tree that is never sampled can still be assigned non-zero probability, if its local features are represented across some sampled trees!</p>
+<p><br>
+</p>
 <div class="fragment">
 <p>Wait… there’s some redundancy here.</p>
 </div>
 <aside class="notes">
-<p>Can show by taking the log and derivative, with some algebra in between.</p>
-<p>Also, that second MLE is basically, among all trees where the parent of S_i has value t, the proportion where S_i had value s.</p>
+<p>That first note is very very important!!</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -874,8 +902,7 @@ Q(p|p^{(n)})
     <script src="presentation_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
     <script src="presentation_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
     <script src="presentation_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
-    <script src="presentation_files/libs/revealjs/plugin/multiplex/socket.io.js"></script>
-    <script src="presentation_files/libs/revealjs/plugin/multiplex/multiplex.js"></script>
+    <script src="presentation_files/libs/revealjs/plugin/reveal-chalkboard/plugin.js"></script>
     <script src="presentation_files/libs/revealjs/plugin/quarto-support/support.js"></script>
   
   <script src="presentation_files/libs/revealjs/plugin/notes/notes.js"></script>
@@ -896,8 +923,8 @@ Q(p|p^{(n)})
 'autoAnimateEasing': "ease",
 'autoAnimateDuration': 0.3,
 'autoAnimateUnmatched': true,
-'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
-'multiplex': {"secret":null,"id":"13afef0caf21e426","url":"https://reveal-multiplex.glitch.me/"},
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleChalkboard(event)\"><kbd>b</kbd> Toggle Chalkboard</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleNotesCanvas(event)\"><kbd>c</kbd> Toggle Notes Canvas</a></li>\n<li class=\"slide-tool-item\" data-item=\"6\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.downloadDrawings(event)\"><kbd>d</kbd> Download Drawings</a></li>\n<li class=\"slide-tool-item\" data-item=\"7\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'chalkboard': {"buttons":true},
 'smaller': true,
  
         // Display controls in the bottom right corner
@@ -1068,10 +1095,10 @@ Q(p|p^{(n)})
         },
 
         // reveal.js plugins
-        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, RevealChalkboard, QuartoSupport,
 
           RevealMath,
-          
+          RevealNotes,
           RevealSearch,
           RevealZoom
         ]
