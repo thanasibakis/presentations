@@ -243,23 +243,25 @@ $$
 
 ## *Subsplit Bayesian network* method {auto-animate=true}
 
-:::: {.columns}
+This is how the indexing looks; eg. $S_{\pi_4} = S_2$
+
+::::{.columns}
 
 ::: {.column width="40%"}
 ![](img/fig4.png)
 :::
 
 ::: {.column width="60%"}
-This is how the indexing looks.
-
-eg. $S_{\pi_4} = S_2$
-:::
-
-::::
+\
+\
+\
 
 $$
 p(T) = p(S_1) \prod_{i > 1} p(S_i | S_{\pi_i})
 $$
+:::
+
+::::
 
 ::: {.notes}
 Ignore the dashed arrows. The framework allows for more complex dependencies, but they only really discuss the parent/aunt dependence.
@@ -449,9 +451,13 @@ eg. a root split that doesn't fully separate dogs and cats isn't compatible with
 
 ## More maximum likelihood {auto-animate="true"}
 
+\
+
 $$
 p(T) = \sum_{\text{compatible } S_1} p(S_1) \prod_{i>1} p(S_i | S_{\pi_i})
 $$
+
+\
 
 Because of that sum, the likelihood will be hard to optimize analytically... it doesn't factorize, so taking a log and a derivative isn't straightforward.
 

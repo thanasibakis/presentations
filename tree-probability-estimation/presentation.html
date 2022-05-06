@@ -525,17 +525,20 @@ p(T) = p(S_1) \prod_{i &gt; 1} p(S_i | S_{\pi_i})
 </section>
 <section id="subsplit-bayesian-network-method-3" class="slide level2" data-auto-animate="true">
 <h2 data-id="quarto-animate-title"><em>Subsplit Bayesian network</em> method</h2>
+<p>This is how the indexing looks; eg. <span class="math inline">\(S_{\pi_4} = S_2\)</span></p>
 <div class="columns">
 <div class="column" style="width:40%;">
 <p><img data-src="img/fig4.png"></p>
 </div><div class="column" style="width:60%;">
-<p>This is how the indexing looks.</p>
-<p>eg. <span class="math inline">\(S_{\pi_4} = S_2\)</span></p>
-</div>
-</div>
+<p><br>
+<br>
+<br>
+</p>
 <p><span class="math display">\[
 p(T) = p(S_1) \prod_{i &gt; 1} p(S_i | S_{\pi_i})
 \]</span></p>
+</div>
+</div>
 <aside class="notes">
 <p>Ignore the dashed arrows. The framework allows for more complex dependencies, but they only really discuss the parent/aunt dependence.</p>
 <style type="text/css">
@@ -721,9 +724,13 @@ p(T) = \sum_{\text{compatible } S_1} p(S_1) \prod_{i&gt;1} p(S_i | S_{\pi_i})
 </section>
 <section id="more-maximum-likelihood" class="slide level2" data-auto-animate="true">
 <h2 data-id="quarto-animate-title">More maximum likelihood</h2>
+<p><br>
+</p>
 <p><span class="math display">\[
 p(T) = \sum_{\text{compatible } S_1} p(S_1) \prod_{i&gt;1} p(S_i | S_{\pi_i})
 \]</span></p>
+<p><br>
+</p>
 <p>Because of that sum, the likelihood will be hard to optimize analytically… it doesn’t factorize, so taking a log and a derivative isn’t straightforward.</p>
 <p><br>
 </p>
@@ -888,7 +895,7 @@ Q(p|p^{(n)})
 'autoAnimateDuration': 0.3,
 'autoAnimateUnmatched': true,
 'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
-'multiplex': {"secret":"16516384758642788674","id":"13afef0caf21e426","url":"https://reveal-multiplex.glitch.me/"},
+'multiplex': {"secret":null,"id":"13afef0caf21e426","url":"https://reveal-multiplex.glitch.me/"},
 'smaller': true,
  
         // Display controls in the bottom right corner
@@ -1062,7 +1069,7 @@ Q(p|p^{(n)})
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
           RevealMath,
-          RevealNotes,
+          
           RevealSearch,
           RevealZoom
         ]
