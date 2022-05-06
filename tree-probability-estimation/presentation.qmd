@@ -1,0 +1,582 @@
+---
+title: Tree Probability Estimation
+author: Thanasi Bakis
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+format:
+    revealjs:
+        chalkboard: true
+        smaller: true
+        auto-animate-duration: 0.3
+
+echo: true
+warning: true
+---
+
+## References
+
+**Primary paper**
+
+Zhang, C., & Matsen IV, F. A. (2018). Generalizing tree probability estimation via Bayesian networks. Advances in Neural Information Processing Systems, 31.
+
+\
+
+**Previous work**
+
+Larget B. (2013). The estimation of tree posterior probabilities using conditional clade probability distributions. Systematic biology, 62(4), 501–511.
+
+## In a nutshell
+
+After running MCMC targeting a posterior distribution of trees, computing probability estimates of a tree is not straightforward.
+
+\
+
+Topics we'll discuss:
+
+- How can a tree and its probability be expressed mathematically
+- Assumptions we can make to enable more accurate probability estimates
+- Techniques to estimate these probabilities
+
+## Some context
+
+Assume we've already run MCMC to collect posterior samples $\theta^{(1)}, ..., \theta^{(K)} \in \Theta$.
+
+\
+
+We can compute quantities of interest from samples, such as:
+
+- Posterior mean: $\hat{E}(\theta | X) = \frac{1}{K} \sum_i \theta^{(i)}$
+- Posterior variance, etc. similarly
+
+If $\theta$ is *discrete*, we can estimate the posterior probability of any particular value in $\Theta$ using **sample relative frequencies**:
+
+$$
+\hat{p}(\theta = t | X) = \frac{1}{K} \sum_k I(\theta^{(k)} = t)
+$$
+
+## Some context {auto-animate=true}
+
+![](img/fig1.jpeg)
+
+Our "$\theta$" is a (rooted) tree!
+
+Trees are discrete data structures; there are a finite number of ways that the evolution of these 12 species can be arranged (so $\Theta$ is a finite set)...
+
+::: {.fragment}
+**...but finite does not imply small**!
+:::
+
+::: {.notes}
+We'll see unrooted trees later.
+:::
+
+## Some context {auto-animate=true}
+
+![](img/fig1.jpeg)
+
+For $n$ species in a bifurcating rooted tree, $|\Theta| = (2n-3)!!$
+
+```{r}
+#| echo: false
+
+double_factorial <- function(n) {
+    if (n == 0 || n == 1)
+        return(1)
+    
+    n * double_factorial(n - 2)
+}
+
+th <- prettyNum(double_factorial(2*12-3), big.mark = ",", scientific = F)
+```
+
+Here, $n = 12$, so $|\Theta|$ is... <span class="fragment">`r th` :( </span>
+
+## The problem
+
+Because of the large parameter space, its likely that we would need a very large sample from the posterior to observe many low-probability trees.
+
+\
+
+Those trees shouldn't be sampled often, but if they're *never* sampled, we have issues with the sample relative frequencies estimator
+$\hat{p}(\theta = k | X) = \frac{1}{K} \sum_i I(\theta^{(i)} = k)$ assigning 0 probability to non-zero probability trees.
+
+## What exactly do we mean by $P($🌴$)$? {auto-animate=true}
+
+![](img/fig1.jpeg)
+
+Let $\mathcal{X} = \{ \text{cat, cheetah, ..., red fox} \}$, the set of leaf values.
+
+We define a **clade** (sounds like "klayd") as $C \subset \mathcal{X}$.
+
+We can represent any tree *uniquely* as a set of clades, called the *clade decomposition* $T$.
+
+## What exactly do we mean by $P($🌴$)$? {auto-animate=true}
+
+![](img/fig1.jpeg)
+
+For example,
+
+- $C_1 = \mathcal{X} = \{ \text{cat, cheetah, ..., red fox} \}$
+- $C_5 = \{ \text{tiger, snow leopard, leopard} \}$, etc.
+
+This tree has unique clade decomposition $T = \{ C_1, ..., C_{11} \}$
+
+## What exactly do we mean by $P($🌴$)$? {auto-animate=true}
+
+![](img/fig1.jpeg)
+
+We're interested in $p(T) = p(C_1, C_2, ..., C_{11})$.
+
+(Note that $p(C_1, C_2)$ examines whether the clades $C_1$ and $C_2$ are contained in the tree.)
+
+\
+
+Sample relative frequencies would count the number of tree samples that contain all the same clades (ie. the number of matching trees).
+What else could we do?
+
+## *Conditional clade distribution* method {auto-animate=true}
+
+Instead, let's introduce a conditional independence assumption to simplify $p(T) = p(C_1, C_2, ..., C_{11})$.
+
+\
+
+Larget (2013): *"It seems reasonable to assume that any knowledge of clades in the cat-like portion of the tree would be approximately independent of events involving clades in the dog-like portion of the tree"*.
+
+\
+
+$$
+p(T) = \prod_{C \, : \, |C| \gt 1} p \left( \, Left(C, T), \, Right(C, T) \, | \, C \, \right)
+$$
+
+## *Conditional clade distribution* method {auto-animate=true}
+
+:::: {.columns}
+
+::: {.column width="50%"}
+![](img/fig1.jpeg)
+:::
+
+::: {.column width="50%"}
+\
+\
+$$
+p(T) = \prod_{C \, : \, |C| \gt 1} p \left( \, Left(C, T), \, Right(C, T) \, | \, C \, \right)
+$$
+:::
+
+::::
+
+In this example,
+
+\begin{align*}
+p(T)
+&= p(C_2, C_7) p(C_3, C_4 | C_2) p(C_5 | C_4) p(C_6 | C_5) p(C_8 | C_7) \\
+&\phantom{==} * p(C_9 | C_8) p(C_{10} | C_9) p(C_{11} | C_{10})
+\end{align*}
+
+::: {.notes}
+We could talk about estimation of these probabilties here; it's basically sample proportions of trees with observed child clades (L,R) among trees with observed parent clade C.
+We will save this discussion for the main method of the paper, though.
+:::
+
+## *Subsplit Bayesian network* method {auto-animate=true}
+
+Whidden & Matsen (2015): *"CCD is still not flexible enough to capture the complexity of inferred posterior distributions on real data."*
+
+\
+
+Zhang & Matsen (2018) present the "subsplit Bayesian network" method to relax this assumption and introduce more flexible dependence structures.
+
+\
+
+Core idea: instead of representing the tree as a set of clades, we will represent it as a Bayesian network whose nodes are pairs of sister clades.
+
+## *Subsplit Bayesian network* method {auto-animate=true}
+
+A **subsplit** $S = (Y, Z)$ of clade $C$ is a tuple of subclades $Y, Z$ where:
+
+:::: {.columns}
+
+::: {.column width="40%"}
+\
+
+- $Y \cap Z = \emptyset$ (disjoint)
+- $Y \cup Z = C$
+- $Y \lt Z$ for some total order $\lt$, typically lexicographical order
+:::
+
+::: {.column width="60%"}
+![](img/fig2.png)
+:::
+
+::::
+
+In tree language, $Y$ and $Z$ are sister clades; they share the same parent clade, $Y \cup Z$.
+
+::: {.notes}
+Recall clades are sets of leaf values
+
+Total order I'm guessing is just to ensure duplicate-meaning tuples don't exist, ie. (Y, Z) and (Z, Y)
+
+The grey ones just carry over the singleton clades so that the Bayesian network always has the same shape,
+so indexing S_1, S_2, ... remains consistent regardless of the tree we sample
+:::
+
+## *Subsplit Bayesian network* method {auto-animate=true}
+
+Pairing sister clades together allows us to easily express dependence of a child clade on both:
+
+- Its parent clade (as in the conditional clade distribution method)
+- Its parent's sister clade <span class="fragment">(...aunt?)</span>
+
+\
+
+::: {.fragment}
+Mathematically speaking...
+
+\
+
+Let $S_i$ be the subsplit-valued random variable at node $i$, and let $S_{\pi_i}$ be the subsplit-valued random variable at the parent node for node $i$.
+
+Then we make the following conditional independence assumption:
+
+$$
+p(T) = p(S_1) \prod_{i > 1} p(S_i | S_{\pi_i})
+$$
+:::
+
+## *Subsplit Bayesian network* method {auto-animate=true}
+
+This is how the indexing looks; eg. $S_{\pi_4} = S_2$
+
+::::{.columns}
+
+::: {.column width="40%"}
+![](img/fig4.png)
+:::
+
+::: {.column width="60%"}
+\
+\
+\
+
+$$
+p(T) = p(S_1) \prod_{i > 1} p(S_i | S_{\pi_i})
+$$
+:::
+
+::::
+
+::: {.notes}
+Ignore the dashed arrows. The framework allows for more complex dependencies, but they only really discuss the parent/aunt dependence.
+:::
+
+## *Subsplit Bayesian network* method {auto-animate=true}
+
+![](img/fig3.png)
+
+$$
+p(T) = p(S_1) \prod_{i > 1} p(S_i | S_{\pi_i})
+$$
+
+For this example,
+
+$$
+p(T) = p(C_2, C_3) p(C_4, C_5 | C_2, C_3) p(C_6 | C_4, C_5) p(C_7 | C_2, C_3)
+$$
+
+::: {.notes}
+S_1 is the 
+:::
+
+## *Subsplit Bayesian network* method {auto-animate=true}
+
+![](img/fig3.png)
+
+For this example,
+
+$$
+p(T) = p(C_2, C_3) p(C_4, C_5 | C_2, C_3) p(C_6 | C_4, C_5) p(C_7 | C_2, C_3)
+$$
+
+vs conditional clade distribution (only parental dependencies):
+
+$$
+p(T) = p(C_2, C_3) p(C_4, C_5 | C_2) p(C_6 | C_5) p(C_7 | C_3)
+$$
+
+## Maximum likelihood estimation {auto-animate=true}
+
+$$
+p(T) = p(S_1) \prod_{i > 1} p(S_i | S_{\pi_i})
+$$
+
+We want to estimate $p(S_1)$ and $p(S_i | S_{\pi_i})$ for all $i$.
+
+\
+
+Say we have a sample of trees $T_1, ..., T_K$ represented as subsplit Bayesian networks.
+Tree $T_k$ has observed subsplit value $s_{i,k}$ at node $S_k$.
+
+The likelihood is:
+
+$$
+L(T_1, ..., T_K) = \prod_k \left( p(S_1 = s_{1,k}) \prod_{i>1} p(S_i = s_{i,k} | S_{\pi_i} = s_{\pi_i, k}) \right)
+$$
+
+## Maximum likelihood estimation {auto-animate=true}
+
+The likelihood is:
+
+$$
+L(T_1, ..., T_K) = \prod_k \left( p(S_1 = s_{1,k}) \prod_{i>1} p(S_i = s_{i,k} | S_{\pi_i} = s_{\pi_i, k}) \right)
+$$
+
+Let $\mathbf{C}_i$ be the observed subsplit values at node $S_i$.
+
+The MLEs are available in closed form:
+
+\begin{align*}
+\hat{p}(S_1 = s) &= \frac{m_1(s)}{\sum_{s' \in \mathbf{C}_1} m_1(s')} \\
+\hat{p}(S_i = s | S_{\pi_i} = t) &= \frac{m_i(s, t)}{\sum_{s' \in \mathbf{C}_i} m_i(s', t)}
+\end{align*}
+
+where $m_1(s) = \sum_k I(s_{1,k} = s_1)$, and $m_i(s, t) = \sum_k I(s_{i,k} = s_i, s_{\pi_i, k} = t_i), i > 1$.
+
+::: {.notes}
+Can show by taking the log and derivative, with some algebra in between.
+
+Also, that second MLE is basically, among all trees where the parent of S_i has value t, the proportion where S_i had value s.
+:::
+
+## Maximum likelihood estimation
+
+More simply:
+
+\begin{align*}
+\hat{p}(S_1 = s) &= \frac{\text{# of trees with } S_1 = s}{\text{sample size } K} \\
+\hat{p}(S_i = s | S_{\pi_i} = t) &= \frac{\text{# of trees where } S_i = s \text{ with parent } t}{\text{# of trees where } t \text{ was the parent of node } S_i}
+\end{align*}
+
+\
+
+These are like the sample proportions we discussed earlier, but only at the local level... thus, a tree that is never sampled can still be assigned non-zero probability, if its local features are represented across some sampled trees!
+
+\
+
+::: {.fragment}
+Wait... there's some redundancy here.
+:::
+
+::: {.notes}
+That first note is very very important!!
+:::
+
+## Maximum likelihood estimation
+
+Do we really need $\hat{p}(S_i = s | S_{\pi_i} = t)$ and $\hat{p}(S_{i'} = s | S_{\pi_{i'}} = t)$ to be different estimates, if we're mainly interested in the probability of the *relationship* "s is child of t" occuring?
+
+The location of the parent-child relationship should not matter.
+
+\
+
+::: {.fragment}
+Let $\mathbf{C}_{\text{ch|pa}}$ contain all pairs of observed child-parent relationships $(s, t)$.
+
+Then instead of:
+
+$$
+\hat{p}(S_i = s | S_{\pi_i} = t) = \frac{m_i(s, t)}{\sum_{s' \in \mathbf{C}_i} m_i(s', t)}
+$$
+
+we have:
+
+$$
+\hat{p}(S_i = s | S_{\pi_i} = t) = \frac{\sum_{i>1} m_i(s, t)}{\sum_{s' \in \mathbf{C}_{\text{ch|pa}}} \sum_{i>1} m_i(s', t)}
+$$
+
+which is free of the node location index $i$.
+:::
+
+## Maximum likelihood estimation
+
+\begin{align*}
+\hat{p}(S_1 = s) &= \frac{\text{# of trees with } S_1 = s}{\text{sample size } K} \\
+\hat{p}(S_i = s | S_{\pi_i} = t) &= \frac{\sum_{i>1} m_i(s, t)}{\sum_{s' \in \mathbf{C}_{\text{ch|pa}}} \sum_{i>1} m_i(s', t)}
+\end{align*}
+
+\
+
+Computational complexity is $\mathcal{O}(KN)$, where:
+
+- $K$ is sample size (number of trees)
+- $N = |\mathcal{X}|$ is the number of leaves in each tree
+
+since we loop over all $K$ sampled trees and all $2N - 2$ edges in each tree.
+
+## Unrooted trees {auto-animate="true"}
+
+![](img/fig5.png)
+
+We've been talking about rooted trees, but unrooted trees are common in phylogenetics.
+
+\
+
+An unrooted tree (left) can be converted to different rooted trees with the same leaves (right) depending on which edge you "bend" to be the root split.
+
+## Unrooted trees {auto-animate="true"}
+
+![](img/fig5.png)
+
+How do we model this?
+
+\
+
+If we observe a sample of unrooted trees, we can still use the models we built for rooted trees, and just *think of the root split as **unobserved***.
+
+## Unrooted trees {auto-animate="true"}
+
+![](img/fig6.png)
+
+That is, there are multiple possible subsplit Bayesian network representations of an unrooted tree, and we are unable to observe the value of the first subsplit.
+
+But, if we condition on any particular value of the first subsplit, we can proceed to consider probabilities of future subsplits as normal.
+
+## Unrooted trees {auto-animate="true"}
+
+![](img/fig6.png)
+
+Since $S_1$ is unobserved, we need to marginalize it out when calculating probabilities:
+
+$$
+p(T) = \sum_{\text{compatible } S_1} p(S_1) \prod_{i>1} p(S_i | S_{\pi_i})
+$$
+
+::: {.notes}
+"Compatible S_1" means it makes sense in the context of the tree.
+eg. a root split that doesn't fully separate dogs and cats isn't compatible with a tree that has all future splits involve only dogs or only cats.
+:::
+
+## More maximum likelihood {auto-animate="true"}
+
+\
+
+$$
+p(T) = \sum_{\text{compatible } S_1} p(S_1) \prod_{i>1} p(S_i | S_{\pi_i})
+$$
+
+\
+
+Because of that sum, the likelihood will be hard to optimize analytically... it doesn't factorize, so taking a log and a derivative isn't straightforward.
+
+\
+
+Instead, we can take a variational approach...
+
+::: {.aside}
+Disclaimer: the following slides are my best understanding of what they did 😅
+:::
+
+## Maximum *lower bound*
+
+Assume briefly that $S_1 \sim q(\cdot)$, where $q$ is some arbitrary distribution over $S_1$ compatible with $T$, and $p(S_1)$ is just some quantity to be estimated (as with the conditional probabilities).
+
+\
+
+We can rewrite $p(T)$ as an expectation with respect to $q$:
+
+\begin{align*}
+p(T)
+&= \sum_{\text{compatible } S_1} p(S_1) \prod_{i>1} p(S_i | S_{\pi_i}) \\
+&= \sum_{\text{compatible } S_1} q(S_1) \frac{p(S_1) \prod_{i>1} p(S_i | S_{\pi_i})}{q(S_1)} \\
+&= E_{S_1 \sim q} \left[ \frac{p(S_1) \prod_{i>1} p(S_i | S_{\pi_i})}{q(S_1)} \right]
+\end{align*}
+
+## Maximum *lower bound*
+
+Then, after taking a log:
+
+\begin{align*}
+\log p(T)
+&= \log E_{S_1 \sim q} \left[ \frac{p(S_1) \prod_{i>1} p(S_i | S_{\pi_i})}{q(S_1)} \right] \\
+&\geq E_{S_1 \sim q} \log \left( \frac{p(S_1) \prod_{i>1} p(S_i | S_{\pi_i})}{q(S_1)} \right) \tag{by Jensen} \\
+&= \sum_{\text{compatible } S_1} q(S_1) \log \left( \frac{p(S_1) \prod_{i>1} p(S_i | S_{\pi_i})}{q(S_1)} \right) \\
+&\overset{\Delta}{=} LB_q(T)
+\end{align*}
+
+We could then choose a $q$ and maximize this **lower bound** with respect to the probabilties we need.
+The paper provides $\hat{p}(S_1), \hat{p}(S_i | S_{\pi_i})$ estimates for the choice of the discrete uniform distribution over the $2N-3$ possible root splits (one for each edge that can be bent).
+
+## EM-style algorithm
+
+Of course, rather than choosing an arbitrary $q$, we should optimize over $q$ in some manner.
+The paper introduces an "extension of the EM algorithm" from a variational perspective:
+
+**E-step**, iteration $n$
+
+\begin{align*}
+q_k^{(n)}(S_1) &= p(S_1 | T_k, p^{(n)}) \\
+Q(p|p^{(n)})
+&= \sum_k LB_{q^{(k)}}(T^{(k)}) \\
+&\propto \sum_k \sum_{\text{compatible } S_1} q_k^{(n)}(S_1) \left( \log p(S_1) + \sum_{i>1} \log p(S_i | S_{\pi_i}) \right)
+\end{align*}
+
+**M-step**, iteration $n$: $p^{(n+1)} = \underset{p}{\arg \max} \, Q(p|p^{(n)})$
+
+\
+
+Notice the choice of $q_k^{(n)}$ is adjusted over iterations $n$ as $p$ is optimized.
+
+::: {.notes}
+This is definitely a bit tough to go through... there is some derivation in the appendix.
+It isn't fully clear to me what that p(S_1 | T_k) is, but the important thing is that it changes with our p estimates over iterations n
+:::
+
+## So does this all work?
+
+The paper ran experiments with 8 benchmark phylogenetic data (unrooted trees) to compare the following methods:
+
+- `SRF` (sample relative frequencies)
+- `CCD` (conditional clade distribution)
+- `SBN-SA` (subsplit Bayesian network, simple average)
+  - The variational approximation where $q$ is the discrete uniform
+- `SBN-EM` (subsplit Bayesian network, EM algorithm)
+- `SBN-EM-`$\alpha$ (subsplit Bayesian network, regularized EM algorithm)
+  - Adds a penalty to the EM objective function
+
+\
+
+Evaluation metric: KL-divergence to ground truth (smaller is better)
+
+## So does this all work?
+
+![](img/fig7.png)
+
+`SBN` methods consistently better, except DS2, where `SRF` can perform competitively in a simple posterior with 7 trees
+
+`CCD`'s strong assumptions struggle with multimodal distributions, compared to `SBN` methods (next slide -->)
+
+`SBN-EM` continues to learn with more samples, especially compared to `CCD` (next next slide -->)
+
+::: {.notes}
+7 trees??
+:::
+
+## So does this all work?
+
+![](img/fig8.png)
+
+(`CCD` underestimates the red peak especially.)
+
+::: {.notes}
+Also notice the overall improvement in divergence (closer to the line) for SBN
+:::
+
+## So does this all work?
+
+![](img/fig9.png)
+
+(`CCD` doesn't improve as much with more samples.)
+
+## Happy Friday :)
+
+![](img/done.jpeg)
