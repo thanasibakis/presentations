@@ -4,6 +4,7 @@ author: Thanasi Bakis
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 format:
     revealjs:
+        multiplex: true
         chalkboard: true
         smaller: true
         auto-animate-duration: 0.3
