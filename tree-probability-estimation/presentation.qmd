@@ -399,6 +399,8 @@ which is free of the node location index $i$.
 \hat{p}(S_i = s | S_{\pi_i} = t) &= \frac{\sum_{i>1} m_i(s, t)}{\sum_{s' \in \mathbf{C}_{\text{ch|pa}}} \sum_{i>1} m_i(s', t)}
 \end{align*}
 
+\
+
 Computational complexity is $\mathcal{O}(KN)$, where:
 
 - $K$ is sample size (number of trees)
