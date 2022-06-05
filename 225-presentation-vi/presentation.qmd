@@ -1,0 +1,617 @@
+---
+title: Variational Inference
+author: Thanasi Bakis
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+format:
+  revealjs:
+    multiplex: true
+fig-align: center
+echo: true
+warning: true
+smaller: true
+auto-animate-duration: 0.3
+---
+
+## The paper
+
+Blei, D. M., Kucukelbir, A., & McAuliffe, J. D. (2017). Variational inference: A review for statisticians. *Journal of the American statistical Association*, 112(518), 859-877.
+
+## Big idea
+
+Variational inference (VI) is a technique for approximating intractable distributions.
+
+\
+
+This arises frequently in Bayesian statistics, when a posterior density cannot be analytically evaluated due to an intractable marginal likelihood:
+
+$$
+p(\mathbf{z} | \mathbf{x}) = \frac{p(\mathbf{z}) p(\mathbf{x} | \mathbf{z})}{\int p(\mathbf{z}) p(\mathbf{x} | \mathbf{z}) \, d\mathbf{z}}
+$$
+
+\
+
+Sound familiar?
+
+## Sounds like MCMC...
+
+MCMC and VI are two tools for the same job.
+
+\
+
+:::: {.columns}
+
+::: {.column width="50%"}
+**MCMC**
+
+::: {.fragment fragment-index=1}
+- Constructs a Markov chain of samples
+:::
+::: {.fragment fragment-index=3}
+- Heavy computational cost
+:::
+::: {.fragment fragment-index=5}
+- Convergence guarantees to the target (Ergodic theorem)
+:::
+:::
+::: {.column width="50%"}
+**VI**
+
+::: {.fragment fragment-index=2}
+- Produces a density function
+:::
+::: {.fragment fragment-index=4}
+- Tends to be faster than MCMC
+:::
+::: {.fragment fragment-index=6}
+- :-(
+:::
+:::
+
+::::
+
+\
+
+::: {.fragment}
+While VI lacks in exactness, it can make Bayesian inference possible in scenarios where MCMC is impractical *(eg. very large data sets, deep learning)*.
+:::
+
+## Overview of VI
+
+Goal: approximate $p(\mathbf{z} | \mathbf{x}) \propto p(\mathbf{z}) p(\mathbf{x} | \mathbf{z})$
+
+\
+
+Key steps:
+
+- Propose a family of distributions $\mathcal{Q}$ to approximate the target $p(\mathbf{z} | \mathbf{x})$
+- Choose the member $q(\mathbf{z})$ that "best approximates" the target
+  - Called the *variational distribution*
+
+\
+
+The family can be some parametric form, eg. $\mathcal{Q} = \{ N(\mu, \sigma^2) : \mu \in \mathbb{R}, \sigma^2 > 0 \}$.
+
+In this case, choosing the "best" $q$ distribution amounts to choosing the "best" parameter values.
+
+These parameters are called the *variational parameters*, $\mathbf{\phi}$.
+
+## What is "best"? {auto-animate="true"}
+
+Specifically, we choose the $q$ that is the closest to the target, in terms of KL divergence:
+
+$$
+q^*(\mathbf{z}) = \underset{q \in \mathcal{Q}}{\text{arg min}} \, \text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z} | \mathbf{x}) \big)
+$$
+
+\
+
+This might not look easy, since it isn't obvious how to measure divergence involving the posterior if we don't know the posterior...
+
+\
+
+Similar to MCMC (Metropolis-Hastings ratio), knowing the posterior *up to a constant* is good enough!
+
+## What is "best"? {auto-animate="true"}
+
+Specifically, we choose the $q$ that is the closest to the target, in terms of KL divergence:
+
+$$
+q^*(\mathbf{z}) = \underset{q \in \mathcal{Q}}{\text{arg min}} \, \text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z} | \mathbf{x}) \big)
+$$
+
+\
+
+Similar to MCMC (Metropolis-Hastings ratio), knowing the posterior *up to a constant* is good enough!
+
+\
+
+$$
+\begin{aligned}
+\text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z} | \mathbf{x}) \big)
+&= \mathbb{E}_{\mathbf{z} \sim q} \big[ \log q(\mathbf{z}) - \log p(\mathbf{z} | \mathbf{x}) \big] \\
+&= \mathbb{E}_{\mathbf{z} \sim q} \big[ \log q(\mathbf{z}) - \log p(\mathbf{z}, \mathbf{x}) \big] + \log p(\mathbf{x})
+\end{aligned}
+$$
+
+## What is "best"? {auto-animate="true"}
+
+Specifically, we choose the $q$ that is the closest to the target, in terms of KL divergence:
+
+$$
+q^*(\mathbf{z}) = \underset{q \in \mathcal{Q}}{\text{arg min}} \, \text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z} | \mathbf{x}) \big)
+$$
+
+\
+
+$$
+\begin{aligned}
+\text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z} | \mathbf{x}) \big)
+&= \mathbb{E}_{\mathbf{z} \sim q} \big[ \log q(\mathbf{z}) - \log p(\mathbf{z} | \mathbf{x}) \big] \\
+&= \mathbb{E}_{\mathbf{z} \sim q} \big[ \log q(\mathbf{z}) - \log p(\mathbf{z}, \mathbf{x}) \big] + \log p(\mathbf{x})
+\end{aligned}
+$$
+
+\
+
+Minimizing the KL is then equivalent to minimizing this expectation.
+
+- We know the joint distribution, and choose the variational distribution
+- $\log p(\mathbf{x})$ is constant w.r.t. $q$
+
+## Introducing the ELBO {auto-animate="true"}
+
+$$
+\begin{aligned}
+\text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z} | \mathbf{x}) \big)
+&= \mathbb{E}_{\mathbf{z} \sim q} \big[ \log q(\mathbf{z}) - \log p(\mathbf{z} | \mathbf{x}) \big] \\
+&= \mathbb{E}_{\mathbf{z} \sim q} \big[ \log q(\mathbf{z}) - \log p(\mathbf{z}, \mathbf{x}) \big] + \log p(\mathbf{x})
+\end{aligned}
+$$
+
+\
+
+Instead of minimizing the expectation, the VI literature maximizes its negative, and calls this quantity the *evidence lower bound* (ELBO):
+
+$$
+\text{ELBO}(q) := \mathbb{E}_{\mathbf{z} \sim q} \big[ \log p(\mathbf{z}, \mathbf{x}) - \log q(\mathbf{z}) \big] \\
+$$
+
+Then:
+
+$$
+\text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z} | \mathbf{x}) \big) = -\text{ELBO(q)} + \log p(\mathbf{x})
+$$
+
+## Introducing the ELBO {auto-animate="true"}
+
+Instead of minimizing the expectation, the VI literature maximizes its negative, and calls this quantity the *evidence lower bound* (ELBO):
+
+$$
+\text{ELBO}(q) := \mathbb{E}_{\mathbf{z} \sim q} \big[ \log p(\mathbf{z}, \mathbf{x}) - \log q(\mathbf{z}) \big] \\
+$$
+
+Then:
+
+$$
+\text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z} | \mathbf{x}) \big) = -\text{ELBO(q)} + \log p(\mathbf{x})
+$$
+
+\
+
+Why the name?
+
+$$
+\begin{aligned}
+\text{ELBO(q)}
+&= \log p(\mathbf{x}) - \text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z} | \mathbf{x}) \big) \\
+&\leq \log p(\mathbf{x})
+\end{aligned}
+$$
+
+## Introducing the ELBO {auto-animate="true"}
+
+Instead of minimizing the expectation, the VI literature maximizes its negative, and calls this quantity the *evidence lower bound* (ELBO):
+
+$$
+\text{ELBO}(q) := \mathbb{E}_{\mathbf{z} \sim q} \big[ \log p(\mathbf{z}, \mathbf{x}) - \log q(\mathbf{z}) \big]
+$$
+
+\
+
+Fun fact about the ELBO: it can be rewritten and interpreted as a balance of two objectives...
+
+- Maximize the expected likelihood (explain the data)
+- Minimize prior divergence (regularize)
+
+$$
+\text{ELBO}(q) = \mathbb{E}_{\mathbf{z} \sim q} \big[ \log p(\mathbf{x} | \mathbf{z}) \big] - \text{KL} \big( q(\mathbf{z}) \, || \, p(\mathbf{z}) \big)
+$$
+
+## The mean-field approximation {auto-animate="true"}
+
+As a review, the objective is:
+
+$$
+\underset{q \in \mathcal{Q}}{\text{arg max}} \, \text{ELBO}(q) = \underset{q \in \mathcal{Q}}{\text{arg max}} \, \mathbb{E}_{\mathbf{z} \sim q} \big[ \log p(\mathbf{z}, \mathbf{x}) - \log q(\mathbf{z}) \big]
+$$
+
+\
+
+One very common type of $\mathcal{Q}$ we propose is called the *mean-field family*.
+Essentially, it only contains distributions that enforce independence between latent variables:
+
+$$
+q(\mathbf{z}) = q_1(z_1) \cdot q_2(z_2) \cdot q_3(z_3) \cdot \ldots
+$$
+
+\
+
+*This is a trade-off: we lose flexibility in our approximation, but we gain a simpler optimization landscape.*
+
+## The mean-field approximation {auto-animate="true"}
+
+*This is a trade-off: we lose flexibility in our approximation, but we gain a simpler optimization landscape.*
+
+![](images/tradeoff.png)
+
+eg. If we target a bivariate normal *with correlation*, the best we can do is a diagonal covariance matrix, since the mean-field approximation forces posterior independence.
+
+::: {.notes}
+The green circle could be stretched along either axis to adjust the marginal variance of that latent variable, but we won't see any stretching in the diagonal direction, since that is modeled by covariance.
+:::
+
+## An example {auto-animate="true"}
+
+Let's explore a Gaussian mixture model (known variance).
+
+- $\mu_k \in \mathbb{R}$ is the mean of the $k^{th}$ class
+  - $\mathbf{\mu} = (\mu_1, \ldots, \mu_K)'$
+- $\mathbf{c_i}$ is a $Kx1$ vector of 0s, except for value 1 at some index $k$
+  - Indicates assignment of $x_i$ to the $k^{th}$ class, for $i = 1...n$
+
+\
+
+Then,
+
+$$
+x_i | \mathbf{c_i}, \mu \sim N(\mathbf{c_i}' \mu, 1)
+$$
+
+for $i = 1...n$.
+
+## An example {auto-animate="true"}
+
+Gaussian mixture model:
+
+$$
+x_i | \mathbf{c_i}, \mu \sim N(\mathbf{c_i}' \mu, 1)
+$$
+
+\
+
+In the Bayesian setting, we place priors on the latent variables:
+
+$$
+\begin{aligned}
+\mu_k &\sim N(0, \sigma^2) \qquad &k &= 1...K \\
+\mathbf{c_i} &\sim \text{Categorical}(\frac{1}{K}, ..., \frac{1}{K}) &i &= 1...n
+\end{aligned}
+$$
+
+The goal is to do inference on $\mathbf{z} := \{\mu_1, \ldots, \mu_K, \mathbf{c_1}, \ldots, \mathbf{c_n}\}$.
+
+::: {.notes}
+$\sigma^2$ is a hyperparameter
+:::
+
+## An example {auto-animate="true"}
+
+The goal is to do inference on $\mathbf{z} := \{\mu_1, \ldots, \mu_K, \mathbf{c_1}, \ldots, \mathbf{c_n}\}$.
+
+\
+
+We propose the following mean-field variational family:
+
+$$
+q(\mathbf{z}; \mathbf{\phi}) = \prod_{i=1}^K q(\mu_k; m_k, s_k^2) \prod_{i=1}^n q(\mathbf{c_i}; \mathbf{\pi_i})
+$$
+
+where:
+
+- $q(\mu_k; m_k, s_k^2) = N(m_k, s_k^2)$
+- $q(\mathbf{c_i}; \mathbf{\pi_i}) = Categorical(\mathbf{\pi_i})$
+  - $\mathbf{\pi_i}$ is a Kx1 vector of class assignment probabilities
+  - ie. $\pi_{ik}$ is the probability that $c_{ik} = 1$ (and all other entries in $\mathbf{c_i}$ are $0$)
+
+Variational parameters $\mathbf{\phi} = \{ m_1, \ldots, m_K, s_1^2, \ldots, s_K^2, \mathbf{\pi_1}, \ldots, \mathbf{\pi_K} \}$
+
+::: {.notes}
+Blei (2018): *In fact, these are the optimal forms of the mean-field variational density for the mixture of Gaussians.*
+:::
+
+## An example {auto-animate="true"}
+
+The goal is to do inference on $\mathbf{z} := \{\mu_1, \ldots, \mu_K, \mathbf{c_1}, \ldots, \mathbf{c_n}\}$.
+
+\
+
+We propose the following mean-field variational family:
+
+$$
+q(\mathbf{z}; \mathbf{\phi}) = \prod_{i=1}^K q(\mu_k; m_k, s_k^2) \prod_{i=1}^n q(\mathbf{c_i}; \mathbf{\pi_i})
+$$
+
+Variational parameters $\mathbf{\phi} = \{ m_1, \ldots, m_K, s_1^2, \ldots, s_K^2, \mathbf{\pi_1}, \ldots, \mathbf{\pi_K} \}$
+
+\
+
+Objective: $\underset{q}{\text{arg max}} \, \text{ELBO}(q) = \underset{\mathbf{\phi}}{\text{arg max}} \, \text{ELBO}(q)$
+
+ie. Finding the optimal $q$ in this family amounts to finding the optimal variational parameters.
+
+## An example {auto-animate="true"}
+
+Objective: $\underset{q}{\text{arg max}} \, \text{ELBO}(q) = \underset{\mathbf{\phi}}{\text{arg max}} \, \text{ELBO}(q)$
+
+\
+
+To perform this optimization, we are going to leverage the mean-field assumption and play a trick...
+
+$$
+\begin{aligned}
+\text{ELBO}(q)
+&= \mathbb{E}_{\mathbf{z} \sim q} \big[ \log p(\mathbf{z}, \mathbf{x}) - \log q(\mathbf{z}) \big] \\
+&= \mathbb{E}_{z_j \sim q_j} \big[ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] \big] - \mathbb{E}_{\mathbf{z} \sim q} \big[ \log q(z_j) \big] + \text{const. w.r.t. } z_j  \\
+&= \mathbb{E}_{z_j \sim q_j} \big[ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] \big] - \mathbb{E}_{z_j \sim q_j} \big[ \log q(z_j) \big] + C  \\
+&= \mathbb{E}_{z_j \sim q_j} \big[ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] - \log q(z_j) \big] + C  \\
+&= -\text{KL}(q(z_j) \, || \, e^{ \{ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} [ \log p(\mathbf{z}, \mathbf{x}) ] \} }) + C
+\end{aligned}
+$$
+
+::: {.notes}
+$q_j$ is the factor for $z_j$ in the mean-field posterior, and $q_{-j}$ is the product of all the other factors leftover
+
+In step two term 1, the independence assumption lets $q$ be factorized into separate integrals/expectations.
+In step two term 2, it lets us split up $q(z_j)$ from the other terms
+:::
+
+## An example {auto-animate="true"}
+
+$$
+\begin{aligned}
+\text{ELBO}(q)
+&= \mathbb{E}_{\mathbf{z} \sim q} \big[ \log p(\mathbf{z}, \mathbf{x}) - \log q(\mathbf{z}) \big] \\
+&= \mathbb{E}_{z_j \sim q_j} \big[ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] \big] - \mathbb{E}_{\mathbf{z} \sim q} \big[ \log q(z_j) \big] + \text{const. w.r.t. } z_j  \\
+&= \mathbb{E}_{z_j \sim q_j} \big[ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] \big] - \mathbb{E}_{z_j \sim q_j} \big[ \log q(z_j) \big] + C  \\
+&= \mathbb{E}_{z_j \sim q_j} \big[ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] - \log q(z_j) \big] + C  \\
+&= -\text{KL}(q(z_j) \, || \, e^{ \{ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} [ \log p(\mathbf{z}, \mathbf{x}) ] \} }) + C
+\end{aligned}
+$$
+
+\
+
+Let's freeze all variational parameters except the ones involved in $q_j(z_j)$.
+
+\
+
+Then maximizing the ELBO boils down to minimzing that KL divergence... which is easy, since KL divergence is minimized when the two distributions are equal/proportional.
+
+## An example {auto-animate="true"}
+
+$$
+\begin{aligned}
+\text{ELBO}(q)
+&= \mathbb{E}_{\mathbf{z} \sim q} \big[ \log p(\mathbf{z}, \mathbf{x}) - \log q(\mathbf{z}) \big] \\
+&= \mathbb{E}_{z_j \sim q_j} \big[ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] \big] - \mathbb{E}_{\mathbf{z} \sim q} \big[ \log q(z_j) \big] + \text{const. w.r.t. } z_j  \\
+&= \mathbb{E}_{z_j \sim q_j} \big[ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] \big] - \mathbb{E}_{z_j \sim q_j} \big[ \log q(z_j) \big] + C  \\
+&= \mathbb{E}_{z_j \sim q_j} \big[ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] - \log q(z_j) \big] + C  \\
+&= -\text{KL}(q(z_j) \, || \, e^{ \{ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} [ \log p(\mathbf{z}, \mathbf{x}) ] \} }) + C
+\end{aligned}
+$$
+
+\
+
+The optimal $q$ has all of the frozen $q_{-j}$ terms, and updates $q_j$'s parameters according to:
+
+$$
+q_j^*(z_j) \propto e^{ \{ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} [ \log p(\mathbf{z}, \mathbf{x}) ] \} }
+$$
+
+::: {.notes}
+This will make more sense in the context of our example...
+:::
+
+## An example {auto-animate="true"}
+
+The optimal $q$ has all of the frozen $q_{-j}$ terms, and updates $q_j$'s parameters according to:
+
+$$
+q_j^*(z_j) \propto e^{ \{ \mathbb{E}_{\mathbf{z_{-j}} \sim q_{-j}} [ \log p(\mathbf{z}, \mathbf{x}) ] \} }
+$$
+
+\
+
+Thus, to maximize the ELBO for all variational parameters, we have an iterative algorithm.
+
+\
+
+For each element $z_j$ of $\mathbf{z}$, we perform the above update, freezing the parameters belonging to the other elements.
+
+## An example {auto-animate="true"}
+
+Let's see this in the context of our example.
+
+\
+
+Start with the term for $\mathbf{c_i}$, fixing $\mathbf{z}_{-\mathbf{c_i}} := \{ \mathbf{c_1}, \ldots, \mathbf{c_{i-1}}, \mathbf{c_{i+1}}, \ldots, \mathbf{c_n}, \mu_1, \ldots, \mu_K \}$:
+
+$$
+\begin{aligned}
+q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i})
+&\propto \exp \big\{ \mathbb{E}_{\mathbf{z}_{-\mathbf{c_i}} \sim q_{-\mathbf{c_i}}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] \big\} \\
+&\propto \exp \big\{ \log p(\mathbf{c_i}) + \mathbb{E}_{\mathbf{z}_{-\mathbf{c_i}} \sim q_{-\mathbf{c_i}}} \big[ \log p(x_i | \mathbf{c_i}, \mathbf{\mu}) \big] \big\} \\
+&= \exp \big\{ \log p(\mathbf{c_i}) + \mathbb{E}_{\mathbf{z}_{-\mathbf{c_i}} \sim q_{-\mathbf{c_i}}} \big[ \sum_{k=1}^K c_{ik} \log p(x_i | \mathbf{c_i}, \mu_k) \big] \big\} \\
+&\ldots \\
+&\propto \exp \big\{ \log \frac{1}{K} + \sum_{k=1}^K c_{ik} \left( \mathbb{E}_{q_{\mu_k}} [\mu_k] x_i - \frac{1}{2} \mathbb{E}_{q_{\mu_k}} [\mu_k^2] \right) \big\}
+\end{aligned}
+$$
+
+::: {.notes}
+Even though we start with $p(\mathbf{z}, \mathbf{x})$, we drop anything that doesn't have to do with data point $i$, since this variational factor is the posterior for class assignment $i$ marginally
+
+Note how we expand $\log p(x_i | \mathbf{c_i}, \mathbf{\mu})$ to have sums of terms with each $\mu_k$, using the indicator elements of $\mathbf{c_i}$ to zero out the means that don't belong to class $i$
+
+The $\ldots$ is just subbing in the log normal density and simplifying constants. Also plugging in discrete uniform prior on $\mathbf{c_i}$, which is constant with respect to $i$ so it drops out in the end
+
+Also at the end we replace the expectations with the mean and second moment from the variational normal distribution for $q_{\mu_k}(\mu_k)$
+:::
+
+## An example {auto-animate="true"}
+
+Start with the term for $\mathbf{c_i}$, fixing $\mathbf{z}_{-\mathbf{c_i}} := \{ \mathbf{c_1}, \ldots, \mathbf{c_{i-1}}, \mathbf{c_{i+1}}, \ldots, \mathbf{c_n}, \mu_1, \ldots, \mu_K \}$:
+
+$$
+\begin{aligned}
+q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i})
+&\propto \exp \big\{ \mathbb{E}_{\mathbf{z}_{-\mathbf{c_i}} \sim q_{-\mathbf{c_i}}} \big[ \log p(\mathbf{z}, \mathbf{x}) \big] \big\} \\
+&\propto \exp \big\{ \log p(\mathbf{c_i}) + \mathbb{E}_{\mathbf{z}_{-\mathbf{c_i}} \sim q_{-\mathbf{c_i}}} \big[ \log p(x_i | \mathbf{c_i}, \mathbf{\mu}) \big] \big\} \\
+&= \exp \big\{ \log p(\mathbf{c_i}) + \mathbb{E}_{\mathbf{z}_{-\mathbf{c_i}} \sim q_{-\mathbf{c_i}}} \big[ \sum_{k=1}^K c_{ik} \log p(x_i | \mathbf{c_i}, \mu_k) \big] \big\} \\
+&\ldots \\
+&\propto \exp \big\{ \log \frac{1}{K} + \sum_{k=1}^K c_{ik} \left( \mathbb{E}_{q_{\mu_k}} [\mu_k] x_i - \frac{1}{2} \mathbb{E}_{q_{\mu_k}} [\mu_k^2] \right) \big\}
+\end{aligned}
+$$
+
+\
+
+The kernel of the optimal posterior term is $q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i}) \propto \prod_{k=1}^K e^{ c_{ik} \left( m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) \right) }$
+
+## An example {auto-animate="true"}
+
+The kernel of the optimal posterior term is $q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i}) \propto \prod_{k=1}^K e^{ c_{ik} \left( m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) \right) }$
+
+\
+
+Remember that we specified the family of $q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i})$ to be a categorical distribution over the $K$ possible vectors $\mathbf{c_i}$ (one for each element that could be $1$).
+
+\
+
+By definition, the categorical distribution's PMF is:
+
+$$
+q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i}) = \prod_{\text{possible values } \mathbf{c'} \text{ of } \mathbf{c_i}} \{ \text{element of } \mathbf{\pi_i} \text{ corresponding to } \mathbf{c'} \}^{\mathbb{I}(\mathbf{c_i} = \mathbf{c'})}
+$$
+
+## An example {auto-animate="true"}
+
+The kernel of the optimal posterior term is $q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i}) \propto \prod_{k=1}^K e^{ c_{ik} \left( m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) \right) }$
+
+\
+
+By definition, the categorical distribution's PMF is:
+
+$$
+q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i}) = \prod_{\text{possible values } \mathbf{c'} \text{ of } \mathbf{c_i}} \{ \text{element of } \mathbf{\pi_i} \text{ corresponding to } \mathbf{c'} \}^{\mathbb{I}(\mathbf{c_i} = \mathbf{c'})}
+$$
+
+\
+
+Each possible value of $\mathbf{c_i}$ corresponds to a unique index $k = 1...K$ containing the value 1 in $c_i$, so we can combine the two:
+
+$$
+\begin{aligned}
+q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i})\
+&\propto \prod_{k=1}^K e^{ c_{ik} \left( m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) \right) } \\
+&= \prod_{k=1}^K \left( e^{ m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) } \right)^{c_{ik}} \\
+\end{aligned}
+$$
+
+## An example {auto-animate="true"}
+
+By definition, the categorical distribution's PMF is:
+
+$$
+q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i}) = \prod_{\text{possible values } \mathbf{c'} \text{ of } \mathbf{c_i}} \{ \text{element of } \mathbf{\pi_i} \text{ corresponding to } \mathbf{c'} \}^{\mathbb{I}(\mathbf{c_i} = \mathbf{c'})}
+$$
+
+\
+
+Each possible value of $\mathbf{c_i}$ corresponds to a unique index $k = 1...K$ containing the value 1 in $c_i$, so we can combine the two:
+
+$$
+\begin{aligned}
+q_{\mathbf{c_i}}^*(\mathbf{c_i}; \mathbf{\pi_i})\
+&\propto \prod_{k=1}^K e^{ c_{ik} \left( m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) \right) } \\
+&= \prod_{k=1}^K \left( e^{ m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) } \right)^{c_{ik}} \\
+\end{aligned}
+$$
+
+Therefore, the optimal updated $\pi_{ik} \propto e^{ m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) }$.
+
+## An example {auto-animate="true"}
+
+Therefore, the optimal updated $\pi_{ik} \propto e^{ m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) }$.
+
+\
+
+Thus, in one iteration of the optimization loop, for every data point $i$, we will compute $\tilde{\pi}_{ik} = e^{ m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) }$ and then normalize the $\tilde{\pi}_{ik}$ across $k$ (fixing $i$):
+
+$$
+\pi_{ik}
+= \frac{\tilde{\pi}_{ik}}{\sum_{k'=1}^K \tilde{\pi}_{ik'}}
+= \frac{e^{ m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) }}{\sum_{k'=1}^K e^{ m_{k'} x_i - \frac{1}{2} (m_{k'}^2 + s_{k'}^2) }}
+$$
+
+\
+
+*(Normalization is required because we only have values proportional to $\pi_{ik}$, and we need them to be valid probabilities [0, 1].)*
+
+## An example {auto-animate="true"}
+
+$$
+\pi_{ik}
+= \frac{\tilde{\pi}_{ik}}{\sum_{k'=1}^K \tilde{\pi}_{ik'}}
+= \frac{e^{ m_k x_i - \frac{1}{2} (m_k^2 + s_k^2) }}{\sum_{k'=1}^K e^{ m_{k'} x_i - \frac{1}{2} (m_{k'}^2 + s_{k'}^2) }}
+$$
+
+\
+
+To spare you some math, we can show similarly for other variational parameters that each iteration of the optimization loop will update:
+
+$$
+\begin{aligned}
+m_k &= \frac{\sum_i \pi_{ik} x_i}{1/\sigma^2 + \sum_i \pi_{ik}} \\
+s_k^2 &= \frac{1}{1/\sigma^2 + \sum_i \pi_{ik}}
+\end{aligned}
+$$
+
+## An example
+
+![](images/algorithm2.png)
+
+::: {.notes}
+Note they use $\phi$ here where I used $\pi$
+:::
+
+## An example
+
+Simulation study with two-dimensional Gaussian mixture model, $K = 5$.
+
+![](images/gmm_result.png)
+
+Notice how, even as the approximation converges, each bivariate normal posterior cannot be "diagonal" due to the mean-field independence assumption.
+
+::: {.notes}
+"The elipses are $2 \sigma$ contours of the variational approximating factors"
+:::
+
+## What's next for VI?
+
+- Different divergences beyond KL?
+  - The ELBO is specific to KL, but perhaps a different divergence would be a tighter lower-bound to the evidence, yielding a better approximation
+- Relaxing mean-field assumption without sacrificing too much efficiency?
+- Learning/optimizing the form of the variational distribution along with the parameters?
+- Studying statistical properties and guarantees?
+  - "Understanding VI as an estimator"
+- Combining MCMC and VI for an ideal tradeoff between accuracy and speed?
+
+## Thank you!
